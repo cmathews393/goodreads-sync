@@ -68,7 +68,7 @@ class Audiobookshelf:
         book_title: str,
         libid: str,
     ) -> None:
-        """Get the Audiobookshelf library item ID for the first result of a specific book title."""
+        """Get the Audiobookshelf library item ID for the closest match of a specific book title."""
         query_params = urlencode({"q": book_title})
         url = f"{self.url}/api/libraries/{libid}/search?{query_params}"
         headers = {"Authorization": f"Bearer {self.key}"}
@@ -76,10 +76,23 @@ class Audiobookshelf:
         response.raise_for_status()
 
         abs_books = response.json()
-        if abs_books.get("book"):
-            return abs_books["book"][0]["libraryItem"]["id"]
+        normalized_title = self._normalize_title(book_title)
+
+        for book in abs_books.get("book", []):
+            abs_title = self._normalize_title(
+                book["libraryItem"]["media"]["metadata"]["title"],
+            )
+            if abs_title == normalized_title:
+                return book["libraryItem"]["id"]
+
         self.missing_books.append(book_title)
         return None
+
+    def _normalize_title(self, title: str) -> str:
+        """Normalize the title for a closer match."""
+        title = title.lower()
+        title = re.sub(r"[^\w\s]", "", title)  # Remove punctuation
+        return title.strip()
 
     def add_tag_to_audiobookshelf_book(
         self: "Audiobookshelf",
@@ -135,14 +148,14 @@ class Audiobookshelf:
 
         return None
 
-    def add_book_to_audiobookshelf_collection(
+    def add_books_to_audiobookshelf_collection(
         self: "Audiobookshelf",
         collection_id: str,
-        book_id: str,
+        book_id: list[str],
     ) -> None:
         """Add a book to an Audiobookshelf collection."""
-        url = f"{self.url}/api/collections/{collection_id}/book"
+        url = f"{self.url}/api/collections/{collection_id}/batch/add"
         headers = {"Authorization": f"Bearer {self.key}"}
-        data = {"id": book_id}
+        data = {"books": book_id}
         response = httpx.post(url, json=data, headers=headers)
         response.raise_for_status()
