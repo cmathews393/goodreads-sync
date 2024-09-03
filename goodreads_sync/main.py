@@ -1,12 +1,33 @@
-from goodreads_sync.config import Config
-from goodreads_sync.functions import GoodreadsRSS
+from goodreads_sync.functions import Audiobookshelf, GoodreadsRSS
 
 
-def main():
+def main() -> None:
     goodreads = GoodreadsRSS()
 
-    print(goodreads.parse_feed(Config.goodreads_rss))
+    # Parse the feed and get collection title and new books
+
+    collection_title, books = goodreads.parse_feed()
+    abs_instance = Audiobookshelf()
+    abs_instance.get_abs_libraries()
+    for libid in abs_instance.lib_ids:
+        collection_id = abs_instance.create_audiobookshelf_collection(
+            collection_title,
+            libid,
+        )
+        for book in books:
+            abs_id = abs_instance.get_abs_book_id(
+                book["title"],
+                libid,
+            )
+            if abs_id:
+                abs_instance.add_book_to_audiobookshelf_collection(
+                    collection_id,
+                    abs_id,
+                )
+    print(abs_instance.missing_books)
+    print("Operation completed.")
 
 
 if __name__ == "__main__":
+    # Sample usage
     main()
