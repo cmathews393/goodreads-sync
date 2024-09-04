@@ -82,7 +82,7 @@ class Audiobookshelf:
             abs_title = self._normalize_title(
                 book["libraryItem"]["media"]["metadata"]["title"],
             )
-            if abs_title == normalized_title:
+            if abs_title in normalized_title:
                 return book["libraryItem"]["id"]
 
         self.missing_books.append(book_title)
